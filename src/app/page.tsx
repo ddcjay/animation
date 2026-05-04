@@ -1,19 +1,31 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Header from "@/components/layout/Header";
 import CategoryTabs from "@/components/layout/CategoryTabs";
 import AnimationCard from "@/components/animation/AnimationCard";
 import AnimationModal from "@/components/animation/AnimationModal";
 import AddUrlModal from "@/components/animation/AddUrlModal";
-import { mockAnimations } from "@/data/mockAnimations";
 import { AnimationItem } from "@/types/animation";
 
 export default function Home() {
-  const [animations, setAnimations] = useState<AnimationItem[]>(mockAnimations);
+  const [animations, setAnimations] = useState<AnimationItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [selectedItem, setSelectedItem] = useState<AnimationItem | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [activeCategory, setActiveCategory] = useState('全部');
+
+  useEffect(() => {
+    fetch('/api/animations')
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          setAnimations(data);
+        }
+      })
+      .catch(console.error)
+      .finally(() => setIsLoading(false));
+  }, []);
 
   const filteredAnimations = activeCategory === '全部'
     ? animations
@@ -21,6 +33,17 @@ export default function Home() {
 
   const handleAdd = (newItem: AnimationItem) => {
     setAnimations(prev => [newItem, ...prev]);
+  };
+
+  const handleDelete = async (id: number) => {
+    try {
+      const res = await fetch(`/api/animations/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        setAnimations(prev => prev.filter(a => a.id !== id));
+      }
+    } catch (err) {
+      console.error('Failed to delete:', err);
+    }
   };
 
   return (
@@ -47,14 +70,18 @@ export default function Home() {
 
         <CategoryTabs activeCategory={activeCategory} onCategoryChange={setActiveCategory} />
 
-        {/* Animation Grid */}
-        {filteredAnimations.length > 0 ? (
+        {isLoading ? (
+          <div className="flex justify-center items-center py-20 text-muted-foreground">
+            <p className="text-lg">載入中...</p>
+          </div>
+        ) : filteredAnimations.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
             {filteredAnimations.map((item) => (
               <AnimationCard
                 key={item.id}
                 item={item}
                 onClick={setSelectedItem}
+                onDelete={() => handleDelete(item.id)}
               />
             ))}
           </div>

@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import * as cheerio from 'cheerio';
+import { db } from '@/db';
+import { animations } from '@/db/schema';
 
 // 偵測常見動畫技術函式庫的特徵關鍵字
 const TECH_SIGNATURES: Record<string, string[]> = {
@@ -60,15 +62,18 @@ export async function POST(req: NextRequest) {
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
       // 無 API Key 時，退回到基礎偵測結果
+      const fallbackData = {
+        title: pageTitle,
+        category: detectedTechs[0] ?? 'CSS 動畫',
+        description: `從 ${new URL(url).hostname} 擷取的動畫範例，使用了 ${detectedTechs.join(', ') || 'CSS'} 等技術。`,
+        techStack: detectedTechs.length > 0 ? detectedTechs : ['CSS'],
+        codeSnippet: `/* 請手動補充從 ${url} 擷取的核心程式碼 */`,
+        sourceUrl: url,
+      };
+      const [inserted] = await db.insert(animations).values(fallbackData).returning();
       return NextResponse.json({
         success: true,
-        data: {
-          title: pageTitle,
-          category: detectedTechs[0] ?? 'CSS 動畫',
-          description: `從 ${new URL(url).hostname} 擷取的動畫範例，使用了 ${detectedTechs.join(', ') || 'CSS'} 等技術。`,
-          techStack: detectedTechs.length > 0 ? detectedTechs : ['CSS'],
-          codeSnippet: `/* 請手動補充從 ${url} 擷取的核心程式碼 */`,
-        },
+        data: inserted,
       });
     }
 
@@ -115,8 +120,12 @@ ${sampleStyle}
     // 清理 LLM 回傳，移除可能的 markdown code fence
     const jsonText = rawText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
     const parsed = JSON.parse(jsonText);
+    const [inserted] = await db.insert(animations).values({
+      ...parsed,
+      sourceUrl: url,
+    }).returning();
 
-    return NextResponse.json({ success: true, data: parsed });
+    return NextResponse.json({ success: true, data: inserted });
   } catch (err: unknown) {
     console.error('[/api/analyze] error:', err);
     return NextResponse.json(

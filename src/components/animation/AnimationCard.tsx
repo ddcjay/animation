@@ -1,15 +1,16 @@
 "use client";
 
 import { motion } from 'framer-motion';
-import { Code2 } from 'lucide-react';
+import { Code2, Trash2 } from 'lucide-react';
 import { AnimationItem } from '@/types/animation';
 
 interface AnimationCardProps {
   item: AnimationItem;
   onClick: (item: AnimationItem) => void;
+  onDelete?: () => void;
 }
 
-export default function AnimationCard({ item, onClick }: AnimationCardProps) {
+export default function AnimationCard({ item, onClick, onDelete }: AnimationCardProps) {
   return (
     <motion.div
       whileHover={{ y: -5 }}
@@ -48,13 +49,24 @@ export default function AnimationCard({ item, onClick }: AnimationCardProps) {
               </div>
             ))}
           </div>
-          <button
-            onClick={(e) => { e.stopPropagation(); onClick(item); }}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-muted-foreground hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 transition-colors"
-          >
-            <Code2 className="h-3.5 w-3.5" />
-            查看程式碼
-          </button>
+          <div className="flex items-center gap-2">
+            {onDelete && (
+              <button
+                onClick={(e) => { e.stopPropagation(); onDelete(); }}
+                className="p-1.5 rounded-lg text-muted-foreground hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
+                title="刪除"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            )}
+            <button
+              onClick={(e) => { e.stopPropagation(); onClick(item); }}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-muted-foreground hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 transition-colors"
+            >
+              <Code2 className="h-3.5 w-3.5" />
+              查看程式碼
+            </button>
+          </div>
         </div>
       </div>
     </motion.div>
