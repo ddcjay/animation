@@ -14,6 +14,7 @@ export default function Home() {
   const [selectedItem, setSelectedItem] = useState<AnimationItem | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [activeCategory, setActiveCategory] = useState('全部');
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     fetch('/api/animations')
@@ -27,9 +28,16 @@ export default function Home() {
       .finally(() => setIsLoading(false));
   }, []);
 
-  const filteredAnimations = activeCategory === '全部'
-    ? animations
-    : animations.filter(a => a.category === activeCategory);
+  const filteredAnimations = animations.filter(a => {
+    const matchesCategory = activeCategory === '全部' || a.category === activeCategory;
+    const searchLower = searchQuery.toLowerCase();
+    const matchesSearch = !searchQuery || 
+      a.title.toLowerCase().includes(searchLower) || 
+      a.description.toLowerCase().includes(searchLower) ||
+      a.techStack.some(t => t.toLowerCase().includes(searchLower));
+    
+    return matchesCategory && matchesSearch;
+  });
 
   const handleAdd = (newItem: AnimationItem) => {
     setAnimations(prev => [newItem, ...prev]);
@@ -48,7 +56,11 @@ export default function Home() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      <Header onAddClick={() => setShowAddModal(true)} />
+      <Header 
+        onAddClick={() => setShowAddModal(true)} 
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+      />
 
       <main className="flex-1 container mx-auto px-4 py-8">
         {/* Hero Section */}

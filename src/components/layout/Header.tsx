@@ -1,10 +1,22 @@
+"use client";
+
 import { Search, Moon, Sun, Monitor } from 'lucide-react';
+import { useTheme } from 'next-themes';
+import { useEffect, useState } from 'react';
 
 interface HeaderProps {
   onAddClick: () => void;
+  searchQuery: string;
+  onSearchChange: (val: string) => void;
 }
 
-export default function Header({ onAddClick }: HeaderProps) {
+export default function Header({ onAddClick, searchQuery, onSearchChange }: HeaderProps) {
+  const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border bg-background/80 backdrop-blur-md">
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
@@ -22,16 +34,25 @@ export default function Header({ onAddClick }: HeaderProps) {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <input
               type="text"
-              placeholder="搜尋動畫技術..."
+              placeholder="搜尋動畫技術或名稱..."
+              value={searchQuery}
+              onChange={(e) => onSearchChange(e.target.value)}
               className="w-full bg-secondary/50 border border-border rounded-full py-2 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
             />
           </div>
         </div>
 
         <div className="flex items-center gap-4">
-          <button className="p-2 rounded-full hover:bg-secondary transition-colors">
-            <Sun className="h-5 w-5 dark:hidden" />
-            <Moon className="h-5 w-5 hidden dark:block" />
+          <button 
+            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+            className="p-2 rounded-full hover:bg-secondary transition-colors"
+            aria-label="切換深淺色主題"
+          >
+            {mounted ? (
+              theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />
+            ) : (
+              <div className="h-5 w-5" />
+            )}
           </button>
           <button
             onClick={onAddClick}

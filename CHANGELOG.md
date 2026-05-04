@@ -1,6 +1,11 @@
 # Changelog
 
 ## [2026-05-04]
+- feat: 實作深色模式與搜尋過濾功能
+  - 導入 `next-themes` 支援系統深淺色主題切換。
+  - 修正 Tailwind V4 樣式中對於 `.dark` 類別的支援。
+  - 實作 Header 即時搜尋功能，透過狀態提升至 `page.tsx` 進行標題與描述的關鍵字過濾。
+
 - chore: 新增環境變數設定與測試準備
   - 建立 `.env.example` 範本檔案。
   - 協助開發者完成 `GEMINI_API_KEY` 設定以測試 AI 解析核心。
