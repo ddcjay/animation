@@ -6,4 +6,6 @@ export interface AnimationItem {
   techStack: string[];
   codeSnippet: string;
   sourceUrl?: string;
+  previewType?: 'iframe' | 'image' | 'none';
+  previewUrl?: string | null;
 }

@@ -71,6 +71,27 @@ export async function POST(req: NextRequest) {
         sourceUrl: url,
       };
       const [inserted] = await db.insert(animations).values(fallbackData).returning();
+      
+      let previewUrl = null;
+      let previewType = 'none';
+      try {
+        const { captureScreenshot } = await import('@/lib/puppeteer');
+        const screenshotPath = await captureScreenshot(url, inserted.id);
+        if (screenshotPath) {
+          previewUrl = screenshotPath;
+          previewType = 'image';
+          const { eq } = await import('drizzle-orm');
+          await db.update(animations)
+            .set({ previewUrl, previewType })
+            .where(eq(animations.id, inserted.id));
+          
+          inserted.previewUrl = previewUrl;
+          inserted.previewType = previewType;
+        }
+      } catch (e) {
+        console.error('Failed to capture screenshot (fallback):', e);
+      }
+
       return NextResponse.json({
         success: true,
         data: inserted,
@@ -147,6 +168,29 @@ ${sampleStyle}
       ...parsed,
       sourceUrl: url,
     }).returning();
+
+    // 5. 擷取截圖 (非同步進行或等待)
+    let previewUrl = null;
+    let previewType = 'none';
+    try {
+      // 動態載入 puppeteer 工具，避免影響模組初始化
+      const { captureScreenshot } = await import('@/lib/puppeteer');
+      const screenshotPath = await captureScreenshot(url, inserted.id);
+      if (screenshotPath) {
+        previewUrl = screenshotPath;
+        previewType = 'image';
+        // 更新資料庫
+        const { eq } = await import('drizzle-orm');
+        await db.update(animations)
+          .set({ previewUrl, previewType })
+          .where(eq(animations.id, inserted.id));
+        
+        inserted.previewUrl = previewUrl;
+        inserted.previewType = previewType;
+      }
+    } catch (e) {
+      console.error('Failed to capture screenshot:', e);
+    }
 
     return NextResponse.json({ success: true, data: inserted });
   } catch (err: unknown) {

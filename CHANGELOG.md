@@ -1,5 +1,20 @@
 # Changelog
 
+## [2026-05-04] (Slider Test Page)
+- feat: 實作拖拽與鍵盤驅動照片輪播測試頁面 (`/test-slider`)
+  - 基於 GSAP Timeline 與 Observer 建立全局進度 (`progress`) 管理。
+  - 實作滑鼠/觸控垂直拖拽與滾輪偵測切換照片。
+  - 實作鍵盤上下/左右方向鍵觸發照片切換。
+  - 加入滑鼠釋放時的自動吸附 (Snap) 動畫。
+  - 實作背景照片視差 (Parallax) 與文字垂直切片錯位進場動畫。
+
+## [2026-05-04] (Puppeteer Preview)
+- feat: 實作 Puppeteer 動畫即時截圖預覽功能
+  - 安裝 `puppeteer` 套件以支援後端網頁截圖。
+  - 更新資料庫 schema，為 `animations` 表格加入 `previewType` 與 `previewUrl` 欄位並執行 push。
+  - 新增 `src/lib/puppeteer.ts` 建立 `captureScreenshot` 工具函式，將截圖儲存至 `public/previews/`。
+  - 於 `/api/analyze/route.ts` 整合截圖流程，並同步更新資料庫的預覽欄位。
+  - 調整 `AnimationCard` 與 `AnimationModal` 前端元件，成功抓取截圖時顯示 `img` 圖片，取代原有的佔位文字。
 ## [2026-05-04]
 - fix: 增強 AI 伺服器錯誤處理與 JSON 格式解析穩定度
   - 優化 `route.ts` 擷取 JSON 的邏輯，使用 Regex 過濾雜訊以避免 `SyntaxError`。

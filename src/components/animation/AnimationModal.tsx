@@ -66,9 +66,18 @@ export default function AnimationModal({ item, onClose }: AnimationModalProps) {
 
               {/* 預覽區 */}
               <div className="aspect-video bg-gradient-to-br from-indigo-50 to-slate-100 dark:from-indigo-950/20 dark:to-slate-900 flex items-center justify-center rounded-t-2xl overflow-hidden">
-                <div className="border-2 border-dashed border-indigo-200/50 dark:border-indigo-800/30 rounded-xl w-[85%] h-[75%] flex items-center justify-center">
-                  <span className="text-sm font-mono text-indigo-400">Preview Animation</span>
-                </div>
+                {item.previewType === 'image' && item.previewUrl ? (
+                  <img 
+                    src={item.previewUrl} 
+                    alt={`${item.title} preview`} 
+                    className="w-full h-full object-cover"
+                    loading="lazy"
+                  />
+                ) : (
+                  <div className="border-2 border-dashed border-indigo-200/50 dark:border-indigo-800/30 rounded-xl w-[85%] h-[75%] flex items-center justify-center">
+                    <span className="text-sm font-mono text-indigo-400">Preview Animation</span>
+                  </div>
+                )}
               </div>
 
               {/* 內容區 */}
