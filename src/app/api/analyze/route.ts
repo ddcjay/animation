@@ -27,7 +27,7 @@ function detectTechs(html: string, scripts: string[]): string[] {
 
 export async function POST(req: NextRequest) {
   try {
-    const { url } = await req.json();
+    const { url, model = 'gemini-3.1-flash-lite-preview' } = await req.json();
 
     if (!url || typeof url !== 'string') {
       return NextResponse.json({ success: false, error: '請提供有效的 URL' }, { status: 400 });
@@ -103,7 +103,7 @@ ${sampleStyle}
 }`;
 
     const geminiRes = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -115,11 +115,34 @@ ${sampleStyle}
     );
 
     const geminiData = await geminiRes.json();
-    const rawText = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+    
+    if (!geminiRes.ok || geminiData.error) {
+      console.error('Gemini API Error:', geminiData.error || geminiData);
+      throw new Error(geminiData.error?.message || 'Gemini API 請求失敗，請確認 API 金鑰是否正確。');
+    }
 
-    // 清理 LLM 回傳，移除可能的 markdown code fence
-    const jsonText = rawText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-    const parsed = JSON.parse(jsonText);
+    const rawText = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+    if (!rawText) {
+      throw new Error('AI 回傳內容為空，解析失敗。');
+    }
+
+    // 清理 LLM 回傳，移除可能的 markdown code fence，並嘗試提取 JSON 區塊
+    let jsonText = rawText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+    
+    // 若還有額外文字，嘗試用 Regex 提取大括號內的內容
+    const jsonMatch = jsonText.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      jsonText = jsonMatch[0];
+    }
+
+    let parsed;
+    try {
+      parsed = JSON.parse(jsonText);
+    } catch (parseError) {
+      console.error('JSON Parse Error. Raw Text was:', rawText);
+      throw new Error('AI 回傳的格式不正確，無法解析為 JSON。');
+    }
+
     const [inserted] = await db.insert(animations).values({
       ...parsed,
       sourceUrl: url,
@@ -128,8 +151,9 @@ ${sampleStyle}
     return NextResponse.json({ success: true, data: inserted });
   } catch (err: unknown) {
     console.error('[/api/analyze] error:', err);
+    const errorMsg = err instanceof Error ? err.message : '伺服器分析時發生錯誤，請稍後再試。';
     return NextResponse.json(
-      { success: false, error: '伺服器分析時發生錯誤，請稍後再試。' },
+      { success: false, error: errorMsg },
       { status: 500 }
     );
   }

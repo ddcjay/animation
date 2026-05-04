@@ -1,6 +1,14 @@
 # Changelog
 
 ## [2026-05-04]
+- fix: 增強 AI 伺服器錯誤處理與 JSON 格式解析穩定度
+  - 優化 `route.ts` 擷取 JSON 的邏輯，使用 Regex 過濾雜訊以避免 `SyntaxError`。
+  - 當 Gemini 服務異常時，拋出明確的錯誤訊息供前端顯示。
+
+- feat: 實作動態 AI 模型切換功能
+  - 於新增動畫卡片視窗加入模型選擇機制。
+  - 將核心分析模型預設為 `gemini-3.1-flash-lite-preview`。
+
 - feat: 實作深色模式與搜尋過濾功能
   - 導入 `next-themes` 支援系統深淺色主題切換。
   - 修正 Tailwind V4 樣式中對於 `.dark` 類別的支援。

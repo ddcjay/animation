@@ -13,6 +13,7 @@ interface AddUrlModalProps {
 
 export default function AddUrlModal({ isOpen, onClose, onAdd }: AddUrlModalProps) {
   const [url, setUrl] = useState('');
+  const [model, setModel] = useState('gemini-3.1-flash-lite-preview');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -27,7 +28,7 @@ export default function AddUrlModal({ isOpen, onClose, onAdd }: AddUrlModalProps
       const res = await fetch('/api/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: url.trim() }),
+        body: JSON.stringify({ url: url.trim(), model }),
       });
 
       const data = await res.json();
@@ -93,6 +94,17 @@ export default function AddUrlModal({ isOpen, onClose, onAdd }: AddUrlModalProps
                     className="flex-1 bg-transparent outline-none text-sm placeholder:text-muted-foreground/60"
                     required
                   />
+                </div>
+
+                <div className="flex gap-2 items-center bg-secondary/50 border border-border rounded-xl px-4 py-3 focus-within:ring-2 focus-within:ring-indigo-500/30 transition-all">
+                  <span className="text-sm font-medium text-muted-foreground shrink-0 whitespace-nowrap">AI 模型：</span>
+                  <select
+                    value={model}
+                    onChange={(e) => setModel(e.target.value)}
+                    className="flex-1 bg-transparent outline-none text-sm text-foreground cursor-pointer"
+                  >
+                    <option value="gemini-3.1-flash-lite-preview">Gemini 3.1 Flash-Lite Preview</option>
+                  </select>
                 </div>
 
                 {error && (
