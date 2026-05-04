@@ -188,22 +188,22 @@ export default function TestSliderPage() {
           className="absolute inset-0 w-full h-full flex items-center justify-center overflow-hidden"
           style={{ zIndex: index, y: index === 0 ? 0 : "100%" }}
         >
-          {/* 黑色的連續膠捲主體 (高度 100% 以無縫連接上一張) */}
-          <div className="relative w-[95vw] md:w-[75vw] h-full bg-black flex flex-col justify-center shadow-[0_0_50px_rgba(0,0,0,0.8)]">
+          {/* 黑色的連續膠捲主體 (高度 100% 滿版，無縫連接) */}
+          <div className="relative w-full h-full bg-black flex flex-col justify-center">
             
-            {/* 膠捲左側齒孔 (Sprockets) */}
+            {/* 膠捲左側齒孔 (Sprockets) - 縮窄並靠邊 */}
             <div 
-              className="absolute left-2 md:left-4 top-0 bottom-0 w-3 md:w-5" 
-              style={{ backgroundImage: "repeating-linear-gradient(to bottom, transparent, transparent 15px, #18181b 15px, #18181b 30px)" }} 
+              className="absolute left-1 md:left-3 top-0 bottom-0 w-2 md:w-4" 
+              style={{ backgroundImage: "repeating-linear-gradient(to bottom, transparent, transparent 12px, #18181b 12px, #18181b 24px)" }} 
             />
             {/* 膠捲右側齒孔 (Sprockets) */}
             <div 
-              className="absolute right-2 md:right-4 top-0 bottom-0 w-3 md:w-5" 
-              style={{ backgroundImage: "repeating-linear-gradient(to bottom, transparent, transparent 15px, #18181b 15px, #18181b 30px)" }} 
+              className="absolute right-1 md:right-3 top-0 bottom-0 w-2 md:w-4" 
+              style={{ backgroundImage: "repeating-linear-gradient(to bottom, transparent, transparent 12px, #18181b 12px, #18181b 24px)" }} 
             />
 
-            {/* 膠捲內部的照片容器 */}
-            <div className="w-full px-10 md:px-20 h-[70vh] flex flex-col justify-center">
+            {/* 膠捲內部的照片容器 - 邊框變窄，照片佔比變大 (RWD 設定) */}
+            <div className="w-full px-6 md:px-12 lg:px-20 h-[80vh] md:h-[85vh] flex flex-col justify-center">
               <div className="img-container w-full h-full relative overflow-hidden rounded-sm">
                 <div
                   className="bg-image absolute inset-0 w-full h-[140%] -top-[20%] bg-cover bg-center"
@@ -213,7 +213,7 @@ export default function TestSliderPage() {
                 
                 {/* 標題疊加在照片上 */}
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <h2 className="font-bold text-5xl md:text-8xl text-white tracking-widest mix-blend-overlay">
+                  <h2 className="font-bold text-5xl md:text-8xl lg:text-[9rem] text-white tracking-widest mix-blend-overlay">
                     {slide.title}
                   </h2>
                 </div>
