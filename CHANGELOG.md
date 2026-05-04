@@ -1,6 +1,10 @@
 # Changelog
 
 ## [2026-05-04]
+- chore: 新增環境變數設定與測試準備
+  - 建立 `.env.example` 範本檔案。
+  - 協助開發者完成 `GEMINI_API_KEY` 設定以測試 AI 解析核心。
+
 - feat: 實作 SQLite + Drizzle ORM 資料持久化儲存
   - 導入 `better-sqlite3` 與 `drizzle-orm`。
   - 建立 `animations` 資料表與對應的 Schema。
