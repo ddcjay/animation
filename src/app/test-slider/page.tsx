@@ -7,26 +7,17 @@ import { Observer } from "gsap/Observer";
 gsap.registerPlugin(Observer);
 
 const slidesData = [
-  {
-    id: 1,
-    title: "SIENA",
-    imageUrl: "https://picsum.photos/id/1015/1920/1080",
-  },
-  {
-    id: 2,
-    title: "FILM",
-    imageUrl: "https://picsum.photos/id/1016/1920/1080",
-  },
-  {
-    id: 3,
-    title: "STUDIO",
-    imageUrl: "https://picsum.photos/id/1018/1920/1080",
-  },
-  {
-    id: 4,
-    title: "LONDON",
-    imageUrl: "https://picsum.photos/id/1019/1920/1080",
-  },
+  { id: 1, title: "01", imageUrl: "/slides/slide-01.jpg" },
+  { id: 2, title: "02", imageUrl: "/slides/slide-02.jpg" },
+  { id: 3, title: "03", imageUrl: "/slides/slide-03.jpg" },
+  { id: 4, title: "04", imageUrl: "/slides/slide-04.jpg" },
+  { id: 5, title: "05", imageUrl: "/slides/slide-05.jpg" },
+  { id: 6, title: "06", imageUrl: "/slides/slide-06.jpg" },
+  { id: 7, title: "07", imageUrl: "/slides/slide-07.jpg" },
+  { id: 8, title: "08", imageUrl: "/slides/slide-08.jpg" },
+  { id: 9, title: "09", imageUrl: "/slides/slide-09.jpg" },
+  { id: 10, title: "10", imageUrl: "/slides/slide-10.jpg" },
+  { id: 11, title: "11", imageUrl: "/slides/slide-11.jpg" },
 ];
 
 // Lerp 函式：用於平滑插值
@@ -54,47 +45,35 @@ export default function TestSliderPage() {
     const tl = gsap.timeline({ paused: true });
     timelineRef.current = tl;
 
-    // 建立 Master Timeline：處理膠捲的 Y 軸位移與內部照片的視差
-    slidesData.forEach((_, i) => {
-      const currentSlide = slidesRef.current[i];
-      if (!currentSlide) return;
-
-      const bgImage = currentSlide.querySelector(".bg-image");
-
-      if (i > 0) {
-        // 下一張膠捲從下方 100% 進入 (無縫接軌前一張)
-        tl.fromTo(
-          currentSlide,
-          { yPercent: 100 },
-          { yPercent: 0, ease: "none", duration: 1 },
-          i - 1
-        );
-        // 背景圖片的視差：膠捲往上時，裡面的照片稍微往下
-        tl.fromTo(
-          bgImage,
-          { yPercent: -20 },
-          { yPercent: 0, ease: "none", duration: 1 },
-          i - 1
-        );
-      }
-
-      if (i < totalSlides - 1) {
-        // 當前張膠捲往上方 -100% 退出
-        tl.fromTo(
-          currentSlide,
-          { yPercent: 0 },
-          { yPercent: -100, ease: "none", duration: 1 },
-          i
-        );
-        // 背景圖片的視差：膠捲往上時，裡面的照片稍微往上推
-        tl.fromTo(
-          bgImage,
-          { yPercent: 0 },
-          { yPercent: 20, ease: "none", duration: 1 },
-          i
-        );
+    // 初始化：第 0 張在原位，其餘全部推到螢幕下方
+    slidesRef.current.forEach((slide, i) => {
+      if (!slide) return;
+      const bgImage = slide.querySelector(".bg-image");
+      if (i === 0) {
+        gsap.set(slide, { yPercent: 0 });
+        gsap.set(bgImage, { yPercent: 0 });
+      } else {
+        gsap.set(slide, { yPercent: 100 });
+        gsap.set(bgImage, { yPercent: -20 });
       }
     });
+
+    // 建立 Master Timeline：處理膠捲的 Y 軸位移與內部照片的視差
+    for (let i = 0; i < totalSlides - 1; i++) {
+      const currentSlide = slidesRef.current[i];
+      const nextSlide = slidesRef.current[i + 1];
+      if (!currentSlide || !nextSlide) continue;
+
+      const currentBg = currentSlide.querySelector(".bg-image");
+      const nextBg = nextSlide.querySelector(".bg-image");
+
+      // 在時間軸位置 i 的這 1 秒內：
+      // 當前張往上退出 + 下一張從下方進入
+      tl.to(currentSlide, { yPercent: -100, ease: "none", duration: 1 }, i);
+      tl.to(currentBg, { yPercent: 20, ease: "none", duration: 1 }, i);
+      tl.to(nextSlide, { yPercent: 0, ease: "none", duration: 1 }, i);
+      tl.to(nextBg, { yPercent: 0, ease: "none", duration: 1 }, i);
+    }
 
     // 渲染迴圈
     const render = () => {
