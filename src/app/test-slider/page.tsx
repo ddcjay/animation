@@ -2,9 +2,6 @@
 
 import React, { useEffect, useRef } from "react";
 import gsap from "gsap";
-import { Observer } from "gsap/Observer";
-
-gsap.registerPlugin(Observer);
 
 const slidesData = [
   { id: 1, imageUrl: "/slides/slide-01.jpg" },
@@ -28,19 +25,21 @@ export default function TestSliderPage() {
   const rafId = useRef<number | null>(null);
 
   const state = useRef({
-    current: 0,       // 目前顯示的 Slide 索引
-    pending: -1,      // 動畫中的目標索引（-1 = 無）
-    targetDrag: 0,    // 拖曳目標量（-1 ~ 1）
-    currentDrag: 0,   // Lerp 後的拖曳量
+    current: 0,
+    pending: -1,
+    drag: 0,
+    smoothDrag: 0,
     animating: false,
+    dragging: false,
+    startY: 0,
   });
 
   useEffect(() => {
     if (!containerRef.current) return;
     const total = slidesData.length;
     const mod = (n: number) => ((n % total) + total) % total;
+    const vh = () => window.innerHeight;
 
-    // 殺掉所有 Slide 上的 GSAP 動畫
     const killAll = () => {
       slidesRef.current.forEach((s) => {
         if (!s) return;
@@ -48,10 +47,8 @@ export default function TestSliderPage() {
         const bg = s.querySelector(".bg-image");
         if (bg) gsap.killTweensOf(bg);
       });
-      gsap.killTweensOf(state.current);
     };
 
-    // 重置：只有 currentSlide 可見
     const reset = () => {
       slidesRef.current.forEach((s, i) => {
         if (!s) return;
@@ -67,54 +64,115 @@ export default function TestSliderPage() {
     };
     reset();
 
-    // 渲染迴圈：處理拖曳期間的即時視覺更新
+    // 依據 drag 值更新兩張 Slide 的位置
+    const updateDragVisual = (d: number) => {
+      const c = state.current.current;
+      const cs = slidesRef.current[c];
+      const cb = cs?.querySelector(".bg-image");
+      gsap.set(cs, { yPercent: d * -100, zIndex: 1 });
+      gsap.set(cb, { yPercent: d * 20 });
+
+      if (d > 0) {
+        const ni = mod(c + 1);
+        const ns = slidesRef.current[ni];
+        const nb = ns?.querySelector(".bg-image");
+        gsap.set(ns, { yPercent: (1 - d) * 100, zIndex: 2 });
+        gsap.set(nb, { yPercent: (1 - d) * -20 });
+      } else if (d < 0) {
+        const pi = mod(c - 1);
+        const ps = slidesRef.current[pi];
+        const pb = ps?.querySelector(".bg-image");
+        gsap.set(ps, { yPercent: -(1 + d) * 100, zIndex: 2 });
+        gsap.set(pb, { yPercent: (1 + d) * 20 });
+      }
+    };
+
+    // 渲染迴圈
     const render = () => {
       if (!state.current.animating) {
-        state.current.currentDrag = lerp(state.current.currentDrag, state.current.targetDrag, 0.1);
-        const d = state.current.currentDrag;
-        const c = state.current.current;
-
-        if (Math.abs(d) > 0.001) {
-          const cs = slidesRef.current[c];
-          const cb = cs?.querySelector(".bg-image");
-          gsap.set(cs, { yPercent: d * -100, zIndex: 1 });
-          gsap.set(cb, { yPercent: d * 20 });
-
-          if (d > 0) {
-            const ni = mod(c + 1);
-            const ns = slidesRef.current[ni];
-            const nb = ns?.querySelector(".bg-image");
-            gsap.set(ns, { yPercent: (1 - d) * 100, zIndex: 2 });
-            gsap.set(nb, { yPercent: (1 - d) * -20 });
-          } else {
-            const pi = mod(c - 1);
-            const ps = slidesRef.current[pi];
-            const pb = ps?.querySelector(".bg-image");
-            gsap.set(ps, { yPercent: -(1 + d) * 100, zIndex: 2 });
-            gsap.set(pb, { yPercent: (1 + d) * 20 });
-          }
+        state.current.smoothDrag = lerp(state.current.smoothDrag, state.current.drag, 0.15);
+        if (Math.abs(state.current.smoothDrag) > 0.001) {
+          updateDragVisual(state.current.smoothDrag);
+        } else if (Math.abs(state.current.smoothDrag) > 0 && !state.current.dragging) {
+          state.current.smoothDrag = 0;
+          state.current.drag = 0;
+          reset();
         }
       }
       rafId.current = requestAnimationFrame(render);
     };
     rafId.current = requestAnimationFrame(render);
 
-    // 命令式過場：支援中斷
+    // 拖曳釋放後的過場動畫（從當前位置繼續，不重設）
+    const animateTransition = (dir: 1 | -1) => {
+      state.current.animating = true;
+      state.current.drag = 0;
+      state.current.smoothDrag = 0;
+
+      const curr = state.current.current;
+      const target = mod(curr + dir);
+      state.current.pending = target;
+
+      const cs = slidesRef.current[curr];
+      const ts = slidesRef.current[target];
+      const cb = cs.querySelector(".bg-image");
+      const tb = ts.querySelector(".bg-image");
+
+      gsap.to(cs, { yPercent: dir === 1 ? -100 : 100, duration: 0.6, ease: "power3.out" });
+      gsap.to(cb, { yPercent: dir === 1 ? 20 : -20, duration: 0.6, ease: "power3.out" });
+      gsap.to(ts, { yPercent: 0, duration: 0.6, ease: "power3.out" });
+      gsap.to(tb, {
+        yPercent: 0, duration: 0.6, ease: "power3.out",
+        onComplete: () => {
+          state.current.current = target;
+          state.current.pending = -1;
+          state.current.animating = false;
+          reset();
+        },
+      });
+    };
+
+    // 彈回原位動畫
+    const snapBack = () => {
+      state.current.animating = true;
+      const c = state.current.current;
+      const cs = slidesRef.current[c];
+      const cb = cs?.querySelector(".bg-image");
+
+      const d = state.current.smoothDrag;
+      const neighborIdx = d > 0 ? mod(c + 1) : mod(c - 1);
+      const ns = slidesRef.current[neighborIdx];
+      const nb = ns?.querySelector(".bg-image");
+      const neighborTarget = d > 0 ? 100 : -100;
+
+      state.current.drag = 0;
+      state.current.smoothDrag = 0;
+
+      gsap.to(cs, { yPercent: 0, duration: 0.4, ease: "power3.out" });
+      gsap.to(cb, { yPercent: 0, duration: 0.4, ease: "power3.out" });
+      gsap.to(ns, { yPercent: neighborTarget, duration: 0.4, ease: "power3.out" });
+      gsap.to(nb, {
+        yPercent: 0, duration: 0.4, ease: "power3.out",
+        onComplete: () => {
+          state.current.animating = false;
+          reset();
+        },
+      });
+    };
+
+    // 鍵盤過場（支援中斷）
     const goTo = (dir: 1 | -1) => {
-      // 若正在動畫中 → 強制完成後再啟動新過場
       if (state.current.animating && state.current.pending >= 0) {
         killAll();
         state.current.current = state.current.pending;
         state.current.pending = -1;
         state.current.animating = false;
-        state.current.targetDrag = 0;
-        state.current.currentDrag = 0;
         reset();
       }
 
       state.current.animating = true;
-      state.current.targetDrag = 0;
-      state.current.currentDrag = 0;
+      state.current.drag = 0;
+      state.current.smoothDrag = 0;
 
       const curr = state.current.current;
       const target = mod(curr + dir);
@@ -143,34 +201,48 @@ export default function TestSliderPage() {
       });
     };
 
-    // 拖曳釋放：判斷是否過場或彈回
-    const snap = () => {
-      const d = state.current.currentDrag;
+    // Pointer 事件：直接追蹤 Y 座標
+    const el = containerRef.current;
+
+    const onPointerDown = (e: PointerEvent) => {
+      if (state.current.animating) return;
+      state.current.dragging = true;
+      state.current.startY = e.clientY;
+      state.current.drag = 0;
+      state.current.smoothDrag = 0;
+      el.setPointerCapture(e.pointerId);
+    };
+
+    const onPointerMove = (e: PointerEvent) => {
+      if (!state.current.dragging || state.current.animating) return;
+      const deltaY = e.clientY - state.current.startY;
+      // 向上拖曳 (deltaY < 0) → drag 正值 → 顯示下一張
+      // 向下拖曳 (deltaY > 0) → drag 負值 → 顯示上一張
+      state.current.drag = Math.max(-1, Math.min(1, -deltaY / vh()));
+    };
+
+    const onPointerUp = () => {
+      if (!state.current.dragging) return;
+      state.current.dragging = false;
+      if (state.current.animating) return;
+
+      const d = state.current.smoothDrag;
       if (d > 0.15) {
-        goTo(1);
+        animateTransition(1);
       } else if (d < -0.15) {
-        goTo(-1);
+        animateTransition(-1);
+      } else if (Math.abs(d) > 0.01) {
+        snapBack();
       } else {
-        state.current.targetDrag = 0;
+        state.current.drag = 0;
+        state.current.smoothDrag = 0;
       }
     };
 
-    const observer = Observer.create({
-      target: window,
-      type: "touch,pointer",
-      onDown: () => {
-        if (state.current.animating) return;
-      },
-      onChangeY: (self) => {
-        if (state.current.animating) return;
-        state.current.targetDrag += self.deltaY * -0.003;
-        state.current.targetDrag = Math.max(-1, Math.min(1, state.current.targetDrag));
-      },
-      onUp: () => {
-        if (state.current.animating) return;
-        snap();
-      },
-    });
+    el.addEventListener("pointerdown", onPointerDown);
+    el.addEventListener("pointermove", onPointerMove);
+    el.addEventListener("pointerup", onPointerUp);
+    el.addEventListener("pointercancel", onPointerUp);
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "ArrowDown" || e.key === "ArrowRight") goTo(1);
@@ -181,7 +253,10 @@ export default function TestSliderPage() {
     return () => {
       if (rafId.current) cancelAnimationFrame(rafId.current);
       killAll();
-      observer.kill();
+      el.removeEventListener("pointerdown", onPointerDown);
+      el.removeEventListener("pointermove", onPointerMove);
+      el.removeEventListener("pointerup", onPointerUp);
+      el.removeEventListener("pointercancel", onPointerUp);
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, []);
