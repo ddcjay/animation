@@ -7,259 +7,202 @@ import { Observer } from "gsap/Observer";
 gsap.registerPlugin(Observer);
 
 const slidesData = [
-  { id: 1, title: "01", imageUrl: "/slides/slide-01.jpg" },
-  { id: 2, title: "02", imageUrl: "/slides/slide-02.jpg" },
-  { id: 3, title: "03", imageUrl: "/slides/slide-03.jpg" },
-  { id: 4, title: "04", imageUrl: "/slides/slide-04.jpg" },
-  { id: 5, title: "05", imageUrl: "/slides/slide-05.jpg" },
-  { id: 6, title: "06", imageUrl: "/slides/slide-06.jpg" },
-  { id: 7, title: "07", imageUrl: "/slides/slide-07.jpg" },
-  { id: 8, title: "08", imageUrl: "/slides/slide-08.jpg" },
-  { id: 9, title: "09", imageUrl: "/slides/slide-09.jpg" },
-  { id: 10, title: "10", imageUrl: "/slides/slide-10.jpg" },
-  { id: 11, title: "11", imageUrl: "/slides/slide-11.jpg" },
+  { id: 1, imageUrl: "/slides/slide-01.jpg" },
+  { id: 2, imageUrl: "/slides/slide-02.jpg" },
+  { id: 3, imageUrl: "/slides/slide-03.jpg" },
+  { id: 4, imageUrl: "/slides/slide-04.jpg" },
+  { id: 5, imageUrl: "/slides/slide-05.jpg" },
+  { id: 6, imageUrl: "/slides/slide-06.jpg" },
+  { id: 7, imageUrl: "/slides/slide-07.jpg" },
+  { id: 8, imageUrl: "/slides/slide-08.jpg" },
+  { id: 9, imageUrl: "/slides/slide-09.jpg" },
+  { id: 10, imageUrl: "/slides/slide-10.jpg" },
+  { id: 11, imageUrl: "/slides/slide-11.jpg" },
 ];
 
-// Lerp 函式：用於平滑插值
-const lerp = (start: number, end: number, factor: number) => {
-  return start + (end - start) * factor;
-};
+const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 
 export default function TestSliderPage() {
   const containerRef = useRef<HTMLDivElement>(null);
   const slidesRef = useRef<HTMLDivElement[]>([]);
-  const timelineRef = useRef<gsap.core.Timeline | null>(null);
   const rafId = useRef<number | null>(null);
-  
-  // 狀態管理
+
   const state = useRef({
-    targetProgress: 0,
-    currentProgress: 0,
-    isSnapping: false,
-    isWrapping: false,
+    current: 0,       // 目前顯示的 Slide 索引
+    pending: -1,      // 動畫中的目標索引（-1 = 無）
+    targetDrag: 0,    // 拖曳目標量（-1 ~ 1）
+    currentDrag: 0,   // Lerp 後的拖曳量
+    animating: false,
   });
 
   useEffect(() => {
     if (!containerRef.current) return;
+    const total = slidesData.length;
+    const mod = (n: number) => ((n % total) + total) % total;
 
-    const totalSlides = slidesData.length;
-    const tl = gsap.timeline({ paused: true });
-    timelineRef.current = tl;
-
-    // 初始化：第 0 張在原位，其餘全部推到螢幕下方
-    slidesRef.current.forEach((slide, i) => {
-      if (!slide) return;
-      const bgImage = slide.querySelector(".bg-image");
-      if (i === 0) {
-        gsap.set(slide, { yPercent: 0 });
-        gsap.set(bgImage, { yPercent: 0 });
-      } else {
-        gsap.set(slide, { yPercent: 100 });
-        gsap.set(bgImage, { yPercent: -20 });
-      }
-    });
-
-    // 建立 Master Timeline：處理膠捲的 Y 軸位移與內部照片的視差
-    for (let i = 0; i < totalSlides - 1; i++) {
-      const currentSlide = slidesRef.current[i];
-      const nextSlide = slidesRef.current[i + 1];
-      if (!currentSlide || !nextSlide) continue;
-
-      const currentBg = currentSlide.querySelector(".bg-image");
-      const nextBg = nextSlide.querySelector(".bg-image");
-
-      // 在時間軸位置 i 的這 1 秒內：
-      // 當前張往上退出 + 下一張從下方進入
-      tl.to(currentSlide, { yPercent: -100, ease: "none", duration: 1 }, i);
-      tl.to(currentBg, { yPercent: 20, ease: "none", duration: 1 }, i);
-      tl.to(nextSlide, { yPercent: 0, ease: "none", duration: 1 }, i);
-      tl.to(nextBg, { yPercent: 0, ease: "none", duration: 1 }, i);
-    }
-
-    // 循環過場：手動處理首尾銜接（Timeline 外的獨立動畫）
-    const wrapTransition = (fromIndex: number, toIndex: number, direction: "down" | "up") => {
-      if (state.current.isWrapping) return;
-      state.current.isWrapping = true;
-      state.current.isSnapping = true;
-
-      const fromSlide = slidesRef.current[fromIndex];
-      const toSlide = slidesRef.current[toIndex];
-      const toBg = toSlide.querySelector(".bg-image");
-
-      // 依方向定位目標 Slide
-      if (direction === "down") {
-        gsap.set(toSlide, { yPercent: 100 });
-        gsap.set(toBg, { yPercent: -20 });
-      } else {
-        gsap.set(toSlide, { yPercent: -100 });
-        gsap.set(toBg, { yPercent: 20 });
-      }
-
-      const exitY = direction === "down" ? -100 : 100;
-      const dur = 0.8;
-
-      gsap.to(fromSlide, { yPercent: exitY, duration: dur, ease: "power3.out" });
-      gsap.to(toSlide, { yPercent: 0, duration: dur, ease: "power3.out" });
-      gsap.to(toBg, {
-        yPercent: 0,
-        duration: dur,
-        ease: "power3.out",
-        onComplete: () => {
-          // 重置所有 Slide 位置，讓 Timeline 從新位置正常運作
-          slidesRef.current.forEach((slide, i) => {
-            if (!slide) return;
-            const bg = slide.querySelector(".bg-image");
-            if (i === toIndex) {
-              gsap.set(slide, { yPercent: 0 });
-              gsap.set(bg, { yPercent: 0 });
-            } else {
-              gsap.set(slide, { yPercent: 100 });
-              gsap.set(bg, { yPercent: -20 });
-            }
-          });
-
-          // 同步進度
-          state.current.targetProgress = toIndex;
-          state.current.currentProgress = toIndex;
-          tl.progress(toIndex / (totalSlides - 1));
-
-          state.current.isWrapping = false;
-          state.current.isSnapping = false;
-        },
+    // 殺掉所有 Slide 上的 GSAP 動畫
+    const killAll = () => {
+      slidesRef.current.forEach((s) => {
+        if (!s) return;
+        gsap.killTweensOf(s);
+        const bg = s.querySelector(".bg-image");
+        if (bg) gsap.killTweensOf(bg);
       });
+      gsap.killTweensOf(state.current);
     };
 
-    // 渲染迴圈
+    // 重置：只有 currentSlide 可見
+    const reset = () => {
+      slidesRef.current.forEach((s, i) => {
+        if (!s) return;
+        const bg = s.querySelector(".bg-image");
+        if (i === state.current.current) {
+          gsap.set(s, { yPercent: 0, zIndex: 1 });
+          gsap.set(bg, { yPercent: 0 });
+        } else {
+          gsap.set(s, { yPercent: 100, zIndex: 0 });
+          gsap.set(bg, { yPercent: 0 });
+        }
+      });
+    };
+    reset();
+
+    // 渲染迴圈：處理拖曳期間的即時視覺更新
     const render = () => {
-      if (!state.current.isWrapping) {
-        // 限制範圍（只在非循環過場時 clamp）
-        state.current.targetProgress = Math.max(0, Math.min(totalSlides - 1, state.current.targetProgress));
-        state.current.currentProgress = lerp(state.current.currentProgress, state.current.targetProgress, 0.08);
+      if (!state.current.animating) {
+        state.current.currentDrag = lerp(state.current.currentDrag, state.current.targetDrag, 0.1);
+        const d = state.current.currentDrag;
+        const c = state.current.current;
 
-        // 更新 Timeline 控制 Y 軸
-        tl.progress(state.current.currentProgress / (totalSlides - 1));
+        if (Math.abs(d) > 0.001) {
+          const cs = slidesRef.current[c];
+          const cb = cs?.querySelector(".bg-image");
+          gsap.set(cs, { yPercent: d * -100, zIndex: 1 });
+          gsap.set(cb, { yPercent: d * 20 });
+
+          if (d > 0) {
+            const ni = mod(c + 1);
+            const ns = slidesRef.current[ni];
+            const nb = ns?.querySelector(".bg-image");
+            gsap.set(ns, { yPercent: (1 - d) * 100, zIndex: 2 });
+            gsap.set(nb, { yPercent: (1 - d) * -20 });
+          } else {
+            const pi = mod(c - 1);
+            const ps = slidesRef.current[pi];
+            const pb = ps?.querySelector(".bg-image");
+            gsap.set(ps, { yPercent: -(1 + d) * 100, zIndex: 2 });
+            gsap.set(pb, { yPercent: (1 + d) * 20 });
+          }
+        }
       }
-
       rafId.current = requestAnimationFrame(render);
     };
     rafId.current = requestAnimationFrame(render);
 
-    const snapToNearest = () => {
-      if (state.current.isWrapping) return;
-      const raw = state.current.targetProgress;
-
-      // 偵測越界 → 觸發循環
-      if (raw <= -0.15) {
-        wrapTransition(0, totalSlides - 1, "up");
-        return;
+    // 命令式過場：支援中斷
+    const goTo = (dir: 1 | -1) => {
+      // 若正在動畫中 → 強制完成後再啟動新過場
+      if (state.current.animating && state.current.pending >= 0) {
+        killAll();
+        state.current.current = state.current.pending;
+        state.current.pending = -1;
+        state.current.animating = false;
+        state.current.targetDrag = 0;
+        state.current.currentDrag = 0;
+        reset();
       }
-      if (raw >= totalSlides - 1 + 0.15) {
-        wrapTransition(totalSlides - 1, 0, "down");
-        return;
-      }
 
-      // 正常吸附
-      state.current.isSnapping = true;
-      const nearestIndex = Math.round(Math.max(0, Math.min(totalSlides - 1, raw)));
-      gsap.to(state.current, {
-        targetProgress: nearestIndex,
-        duration: 0.8,
-        ease: "power3.out",
+      state.current.animating = true;
+      state.current.targetDrag = 0;
+      state.current.currentDrag = 0;
+
+      const curr = state.current.current;
+      const target = mod(curr + dir);
+      state.current.pending = target;
+
+      const cs = slidesRef.current[curr];
+      const ts = slidesRef.current[target];
+      const cb = cs.querySelector(".bg-image");
+      const tb = ts.querySelector(".bg-image");
+
+      gsap.set(cs, { zIndex: 1 });
+      gsap.set(ts, { yPercent: dir === 1 ? 100 : -100, zIndex: 2 });
+      gsap.set(tb, { yPercent: dir === 1 ? -20 : 20 });
+
+      gsap.to(cs, { yPercent: dir === 1 ? -100 : 100, duration: 0.8, ease: "power3.out" });
+      gsap.to(cb, { yPercent: dir === 1 ? 20 : -20, duration: 0.8, ease: "power3.out" });
+      gsap.to(ts, { yPercent: 0, duration: 0.8, ease: "power3.out" });
+      gsap.to(tb, {
+        yPercent: 0, duration: 0.8, ease: "power3.out",
         onComplete: () => {
-          state.current.isSnapping = false;
-        }
+          state.current.current = target;
+          state.current.pending = -1;
+          state.current.animating = false;
+          reset();
+        },
       });
+    };
+
+    // 拖曳釋放：判斷是否過場或彈回
+    const snap = () => {
+      const d = state.current.currentDrag;
+      if (d > 0.15) {
+        goTo(1);
+      } else if (d < -0.15) {
+        goTo(-1);
+      } else {
+        state.current.targetDrag = 0;
+      }
     };
 
     const observer = Observer.create({
       target: window,
       type: "touch,pointer",
       onDown: () => {
-        if (state.current.isWrapping) return;
-        gsap.killTweensOf(state.current);
-        state.current.isSnapping = false;
+        if (state.current.animating) return;
       },
       onChangeY: (self) => {
-        if (state.current.isWrapping) return;
-        if (state.current.isSnapping) {
-          gsap.killTweensOf(state.current);
-          state.current.isSnapping = false;
-        }
-        const delta = self.deltaY * -0.002;
-        state.current.targetProgress += delta;
+        if (state.current.animating) return;
+        state.current.targetDrag += self.deltaY * -0.003;
+        state.current.targetDrag = Math.max(-1, Math.min(1, state.current.targetDrag));
       },
       onUp: () => {
-        if (state.current.isWrapping) return;
-        if (!state.current.isSnapping) snapToNearest();
+        if (state.current.animating) return;
+        snap();
       },
     });
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (state.current.isWrapping) return;
-      gsap.killTweensOf(state.current);
-      const currentIndex = Math.round(state.current.targetProgress);
-
-      if (e.key === "ArrowDown" || e.key === "ArrowRight") {
-        if (currentIndex >= totalSlides - 1) {
-          wrapTransition(totalSlides - 1, 0, "down");
-        } else {
-          gsap.to(state.current, {
-            targetProgress: currentIndex + 1,
-            duration: 0.8,
-            ease: "power3.out"
-          });
-        }
-      } else if (e.key === "ArrowUp" || e.key === "ArrowLeft") {
-        if (currentIndex <= 0) {
-          wrapTransition(0, totalSlides - 1, "up");
-        } else {
-          gsap.to(state.current, {
-            targetProgress: currentIndex - 1,
-            duration: 0.8,
-            ease: "power3.out"
-          });
-        }
-      }
+      if (e.key === "ArrowDown" || e.key === "ArrowRight") goTo(1);
+      else if (e.key === "ArrowUp" || e.key === "ArrowLeft") goTo(-1);
     };
-
     window.addEventListener("keydown", handleKeyDown);
 
     return () => {
       if (rafId.current) cancelAnimationFrame(rafId.current);
+      killAll();
       observer.kill();
-      tl.kill();
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, []);
 
   return (
-    // 外層容器設定為暗灰色 (zinc-900)，這樣才能突顯出黑色的膠捲
     <div ref={containerRef} className="h-screen w-full overflow-hidden relative bg-zinc-900 select-none touch-none">
       {slidesData.map((slide, index) => (
         <div
           key={slide.id}
-          ref={(el) => {
-            if (el) slidesRef.current[index] = el;
-          }}
-          // 每個 Slide 是 100vh，內部置中放置膠捲
+          ref={(el) => { if (el) slidesRef.current[index] = el; }}
           className="absolute inset-0 w-full h-full flex items-center justify-center overflow-hidden"
-          style={{ zIndex: index }}
         >
-          {/* 黑色的連續膠捲主體 (高度 100% 滿版，無縫連接) */}
           <div className="relative w-full h-full bg-black flex flex-col justify-center">
-            
-            {/* 膠捲左側齒孔 (Sprockets) */}
-            <div 
-              className="absolute left-3 md:left-6 top-0 bottom-0 w-2 md:w-4" 
-              style={{ backgroundImage: "repeating-linear-gradient(to bottom, transparent, transparent 12px, #555 12px, #555 24px)" }} 
+            <div
+              className="absolute left-3 md:left-6 top-0 bottom-0 w-2 md:w-4"
+              style={{ backgroundImage: "repeating-linear-gradient(to bottom, transparent, transparent 12px, #555 12px, #555 24px)" }}
             />
-            {/* 膠捲右側齒孔 (Sprockets) */}
-            <div 
-              className="absolute right-3 md:right-6 top-0 bottom-0 w-2 md:w-4" 
-              style={{ backgroundImage: "repeating-linear-gradient(to bottom, transparent, transparent 12px, #555 12px, #555 24px)" }} 
+            <div
+              className="absolute right-3 md:right-6 top-0 bottom-0 w-2 md:w-4"
+              style={{ backgroundImage: "repeating-linear-gradient(to bottom, transparent, transparent 12px, #555 12px, #555 24px)" }}
             />
-
-            {/* 膠捲內部的照片容器 */}
             <div className="w-full px-6 md:px-12 lg:px-20 h-[88vh] md:h-[92vh] flex flex-col justify-center">
               <div className="img-container w-full h-full relative overflow-hidden rounded-sm">
                 <div
@@ -269,16 +212,12 @@ export default function TestSliderPage() {
                 <div className="absolute inset-0 bg-black/10" />
               </div>
             </div>
-
           </div>
         </div>
       ))}
-      
-      {/* 操作提示 */}
       <div className="absolute bottom-1 left-1/2 -translate-x-1/2 z-50 text-zinc-500 text-xs tracking-widest">
         拖曳或使用方向鍵瀏覽
       </div>
     </div>
   );
 }
-
