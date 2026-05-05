@@ -54,10 +54,10 @@ export default function TestSliderPage() {
         if (!s) return;
         const bg = s.querySelector(".bg-image");
         if (i === state.current.current) {
-          gsap.set(s, { yPercent: 0, zIndex: 1 });
-          gsap.set(bg, { yPercent: 0 });
+          gsap.set(s, { yPercent: 0, zIndex: 1, willChange: "transform" });
+          gsap.set(bg, { yPercent: 0, willChange: "transform" });
         } else {
-          gsap.set(s, { yPercent: 100, zIndex: 0 });
+          gsap.set(s, { yPercent: 100, zIndex: 0, willChange: "auto" });
           gsap.set(bg, { yPercent: 0 });
         }
       });
@@ -90,7 +90,7 @@ export default function TestSliderPage() {
     // 渲染迴圈
     const render = () => {
       if (!state.current.animating) {
-        state.current.smoothDrag = lerp(state.current.smoothDrag, state.current.drag, 0.15);
+        state.current.smoothDrag = lerp(state.current.smoothDrag, state.current.drag, 0.12);
         if (Math.abs(state.current.smoothDrag) > 0.001) {
           updateDragVisual(state.current.smoothDrag);
         } else if (Math.abs(state.current.smoothDrag) > 0 && !state.current.dragging) {
@@ -118,11 +118,11 @@ export default function TestSliderPage() {
       const cb = cs.querySelector(".bg-image");
       const tb = ts.querySelector(".bg-image");
 
-      gsap.to(cs, { yPercent: dir === 1 ? -100 : 100, duration: 0.6, ease: "power3.out" });
-      gsap.to(cb, { yPercent: dir === 1 ? 20 : -20, duration: 0.6, ease: "power3.out" });
-      gsap.to(ts, { yPercent: 0, duration: 0.6, ease: "power3.out" });
+      gsap.to(cs, { yPercent: dir === 1 ? -100 : 100, duration: 0.8, ease: "power2.out" });
+      gsap.to(cb, { yPercent: dir === 1 ? 20 : -20, duration: 0.8, ease: "power2.out" });
+      gsap.to(ts, { yPercent: 0, duration: 0.8, ease: "power2.out" });
       gsap.to(tb, {
-        yPercent: 0, duration: 0.6, ease: "power3.out",
+        yPercent: 0, duration: 0.8, ease: "power2.out",
         onComplete: () => {
           state.current.current = target;
           state.current.pending = -1;
@@ -148,11 +148,11 @@ export default function TestSliderPage() {
       state.current.drag = 0;
       state.current.smoothDrag = 0;
 
-      gsap.to(cs, { yPercent: 0, duration: 0.4, ease: "power3.out" });
-      gsap.to(cb, { yPercent: 0, duration: 0.4, ease: "power3.out" });
-      gsap.to(ns, { yPercent: neighborTarget, duration: 0.4, ease: "power3.out" });
+      gsap.to(cs, { yPercent: 0, duration: 0.5, ease: "power2.inOut" });
+      gsap.to(cb, { yPercent: 0, duration: 0.5, ease: "power2.inOut" });
+      gsap.to(ns, { yPercent: neighborTarget, duration: 0.5, ease: "power2.inOut" });
       gsap.to(nb, {
-        yPercent: 0, duration: 0.4, ease: "power3.out",
+        yPercent: 0, duration: 0.5, ease: "power2.inOut",
         onComplete: () => {
           state.current.animating = false;
           reset();
@@ -184,14 +184,14 @@ export default function TestSliderPage() {
       const tb = ts.querySelector(".bg-image");
 
       gsap.set(cs, { zIndex: 1 });
-      gsap.set(ts, { yPercent: dir === 1 ? 100 : -100, zIndex: 2 });
-      gsap.set(tb, { yPercent: dir === 1 ? -20 : 20 });
+      gsap.set(ts, { yPercent: dir === 1 ? 100 : -100, zIndex: 2, willChange: "transform" });
+      gsap.set(tb, { yPercent: dir === 1 ? -20 : 20, willChange: "transform" });
 
-      gsap.to(cs, { yPercent: dir === 1 ? -100 : 100, duration: 0.8, ease: "power3.out" });
-      gsap.to(cb, { yPercent: dir === 1 ? 20 : -20, duration: 0.8, ease: "power3.out" });
-      gsap.to(ts, { yPercent: 0, duration: 0.8, ease: "power3.out" });
+      gsap.to(cs, { yPercent: dir === 1 ? -100 : 100, duration: 1, ease: "power2.inOut" });
+      gsap.to(cb, { yPercent: dir === 1 ? 20 : -20, duration: 1, ease: "power2.inOut" });
+      gsap.to(ts, { yPercent: 0, duration: 1, ease: "power2.inOut" });
       gsap.to(tb, {
-        yPercent: 0, duration: 0.8, ease: "power3.out",
+        yPercent: 0, duration: 1, ease: "power2.inOut",
         onComplete: () => {
           state.current.current = target;
           state.current.pending = -1;
@@ -291,7 +291,7 @@ export default function TestSliderPage() {
         </div>
       ))}
       <div className="absolute bottom-1 left-1/2 -translate-x-1/2 z-50 text-zinc-500 text-xs tracking-widest">
-        拖曳或使用方向鍵瀏覽
+        上下拖曳或使用方向鍵瀏覽
       </div>
     </div>
   );
